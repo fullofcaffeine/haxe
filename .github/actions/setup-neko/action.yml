@@ -1,26 +1,37 @@
 name: Setup neko
-description: Install latest neko from build.haxe.org
+description: Install the Neko build used by this compiler’s standard library
 runs:
   using: composite
   steps:
-  - name: Install Neko from S3
+  - name: Download the matching Neko runtime
+    shell: bash
+    run: |
+      set -eu
+      # This standard library uses separate semaphore primitives. Later Neko
+      # builds merged them with locks without changing the 2.4.1 version.
+      build=neko_2026-03-19_master_5f449dc
+      archive=tar.gz
+      if [ "$RUNNER_OS" = Windows ]; then archive=zip; fi
+      curl --fail --silent --show-error --location --retry 3 --retry-delay 5 \
+        "https://build.haxe.org/builds/neko/$PLATFORM/$build.$archive" \
+        --output "$RUNNER_TEMP/neko.$archive"
+
+  - name: Install Neko
     shell: pwsh
     if: runner.os == 'Windows'
     run: |
-      Invoke-WebRequest https://build.haxe.org/builds/neko/$env:PLATFORM/neko_latest.zip -OutFile $env:RUNNER_TEMP/neko_latest.zip
-      Expand-Archive $env:RUNNER_TEMP/neko_latest.zip -DestinationPath $env:RUNNER_TEMP
+      Expand-Archive $env:RUNNER_TEMP/neko.zip -DestinationPath $env:RUNNER_TEMP
       $NEKOPATH = Get-ChildItem $env:RUNNER_TEMP/neko-*-*
       echo "$NEKOPATH" >> $env:GITHUB_PATH
       echo "NEKOPATH=$NEKOPATH" >> $env:GITHUB_ENV
 
-  - name: Install Neko from S3
+  - name: Install Neko
     shell: bash
     if: runner.os != 'Windows'
     run: |
       set -ex
 
-      curl -sSL --retry 3 --retry-delay 5 --fail https://build.haxe.org/builds/neko/$PLATFORM/neko_latest.tar.gz -o $RUNNER_TEMP/neko_latest.tar.gz
-      tar -xf $RUNNER_TEMP/neko_latest.tar.gz -C $RUNNER_TEMP
+      tar -xf "$RUNNER_TEMP/neko.tar.gz" -C "$RUNNER_TEMP"
       NEKOPATH=`echo $RUNNER_TEMP/neko-*-*`
       sudo mkdir -p /usr/local/bin
       sudo mkdir -p /usr/local/include

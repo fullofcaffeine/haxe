@@ -8,9 +8,11 @@ using StringTools;
 using haxe.io.Path;
 
 class Hl {
-	static final hlSrc = Path.join([getDownloadPath(), "hashlink"]);
+	// HLC emits calls through hl_type.vobj_proto. Build against the matching runtime headers.
+	static final hlRevision = "a6c94330492d002dca36b69ece7c4bedf4d91de5";
+	static final hlSrc = Path.join([getDownloadPath(), "hashlink-" + hlRevision]);
 
-	static final hlBuild = Path.join([getDownloadPath(), "hashlink_build"]);
+	static final hlBuild = Path.join([getDownloadPath(), "hashlink_build-" + hlRevision]);
 
 	static final hlBinary = if (!commandSucceed("hl", ["--version"])) {
 			Path.join([getInstallPath(), "hashlink", systemName == 'Windows' ? '' : 'bin', "hl" + ((systemName == "Windows") ? ".exe" : "")]);
@@ -39,9 +41,10 @@ class Hl {
 			return;
 		}
 		if (!FileSystem.exists(hlSrc))
-			runCommand("git", ["clone", "--depth=1", "https://github.com/HaxeFoundation/hashlink.git", hlSrc]);
-		else
-			infoMsg("Reusing hashlink repository");
+			runCommand("git", ["init", hlSrc]);
+		if (!commandSucceed("git", ["-C", hlSrc, "cat-file", "-e", hlRevision + "^{commit}"]))
+			runCommand("git", ["-C", hlSrc, "fetch", "--depth=1", "https://github.com/HaxeFoundation/hashlink.git", hlRevision]);
+		runCommand("git", ["-C", hlSrc, "checkout", "--detach", hlRevision]);
 
 		switch (systemName) {
 			case "Linux":

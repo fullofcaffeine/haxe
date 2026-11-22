@@ -1,6 +1,9 @@
 -- Try native Lua 5.3+ bit operators first (preferred over bit32/bit library)
 local _hx_bit_clamp_native = (function()
     local ok, fn = pcall(load, [[
+        -- The sign-bit mask must stay positive for the native implementation.
+        -- LuaJIT accepts this syntax but evaluates it with signed 32-bit words.
+        if (0x80000000 & 0x80000000) ~= 2147483648 then return nil end
         return function(v)
             if v <= 2147483647 and v >= -2147483648 then
                 if v > 0 then return _G.math.floor(v)
