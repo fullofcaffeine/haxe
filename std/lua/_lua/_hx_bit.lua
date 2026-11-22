@@ -1,6 +1,9 @@
 -- Try native Lua 5.3+ bitwise operators first
 local _hx_bit_native = (function()
     local ok, fn = pcall(load, [[
+        -- The sign-bit mask must stay positive for the native implementation.
+        -- LuaJIT accepts this syntax but evaluates it with signed 32-bit words.
+        if (0x80000000 & 0x80000000) ~= 2147483648 then return nil end
         -- mask to unsigned 32-bit, then convert to signed Int32
         local function _s(v)
             v = v & 0xFFFFFFFF
