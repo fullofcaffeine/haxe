@@ -367,7 +367,7 @@ let parse config entry lctx code file =
 			let last = (match Stream.peek s with None -> last_token ctx s | Some t -> t) in
 			error (Unexpected (fst last)) (pos last)
 
-let parse_string config entry s p error inlined =
+let parse_string ?(offset = 0) config entry s p error inlined =
 	let old_display = display_position#get in
 	let restore() =
 		if not inlined then begin
@@ -382,7 +382,10 @@ let parse_string config entry s p error inlined =
 		config
 	in
 	let result = try
-		parse config entry lctx (Sedlexing.Utf8.from_string s) p.pfile
+		let lexbuf = Sedlexing.Utf8.from_string s in
+		if offset > 0 then
+			Sedlexing.set_position lexbuf { Lexing.pos_fname = p.pfile; pos_lnum = 1; pos_bol = 0; pos_cnum = offset };
+		parse config entry lctx lexbuf p.pfile
 	with Error (e,pe) ->
 		restore();
 		error (error_msg e) (if inlined then pe else p)
@@ -397,8 +400,7 @@ let parse_string config entry s p error inlined =
 	result
 
 let parse_expr_string config s p error inl =
-	let s = if p.pmin > 0 then (String.make p.pmin ' ') ^ s else s in
-	let result = parse_string config expr s p error inl in
+	let result = parse_string ~offset:p.pmin config expr s p error inl in
 	if inl then
 		result
 	else begin
